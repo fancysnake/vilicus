@@ -12,6 +12,13 @@ _.python.venv = { path = ".venv", create = true }
 [tasks.p]
 run = "poetry"
 
+[tasks.install]
+run = """
+pip install -U pip
+pip install -U poetry
+poetry install
+"""
+
 [tasks.update]
 run = """
 pre-commit autoupdate
@@ -22,3 +29,72 @@ deptry .
 pip-audit .
 poetry show -o
 """
+
+# LINT
+
+[tasks._lint]
+description = "Base env vars for lint tasks"
+run = ""
+env.PYTHONPATH = "src"
+
+[tasks.black]
+run = "mise run _lint -- black src tests"
+
+[tasks.black-check]
+run = "mise run _lint -- black --check src tests"
+
+[tasks.codespell]
+run = "mise run _lint -- codespell src tests/unit tests/integration"
+
+[tasks.deptry]
+run = "mise run _lint -- deptry src tests"
+
+[tasks.il]
+run = "mise run _lint -- lint-imports --config=pyproject.toml"
+
+[tasks.mypy]
+run = "mise run _lint -- mypy src"
+
+[tasks.pylint]
+run = "mise run _lint -- pylint src tests"
+
+[tasks.ruff]
+run = "mise run _lint -- ruff check src tests"
+
+[tasks.ruff-fix]
+run = "mise run _lint -- ruff check --fix src tests"
+
+[tasks.vulture]
+run = "vulture --config=pyproject.toml src"
+
+[tasks.check]
+depends = ["black", "ruff-fix", "codespell", "mypy", "il", "pylint", "vulture"]
+
+[tasks.prcheck]
+depends = ["black-check", "ruff", "codespell", "mypy", "pylint", "vulture"]
+
+# PYTEST
+
+[tasks._pytest]
+description = "Base pytest runner with test env (internal)"
+run = "pytest"
+
+[tasks.unittest]
+description = "Run unit tests"
+run = "mise run _pytest -- tests/unit --cov=tests.unit --cov=ludamus"
+
+[tasks.test]
+description = "Run all tests"
+run = "mise run _pytest -- tests"
+
+[tasks.diff-cover]
+depends = ["coverage"]
+run = """
+coverage xml --data-file=.coverage
+diff-cover coverage.xml --compare-branch=main
+"""
+
+# OTHER
+
+[tasks.shitcheck]
+run = "git diff main|grep -E '^\\+.*(noqa|type: ignore|Any|ANY|pylint|pragma|cast\\()'"

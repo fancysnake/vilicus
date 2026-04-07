@@ -1,0 +1,42 @@
+---
+name: CI
+
+on:
+  pull_request:
+    paths-ignore: ["docs/**"]
+
+  push:
+    branches: ["main"]
+    paths-ignore: ["docs/**"]
+
+concurrency:
+  group: ${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jdx/mise-action@v2
+      - run: mise install
+      - run: mise run install
+      - run: mise run prcheck
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jdx/mise-action@v2
+      - run: mise install
+      - run: mise run install
+      - run: mise run test -- --cov
+      - run: mise exec -- coverage xml
+
+      # Combine and upload
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        if: ${{ !cancelled() }}
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage.xml
