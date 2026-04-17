@@ -41,7 +41,9 @@ class TestNotify:
         result = runner.invoke(init_command(), ["notify"])
 
         assert result.exit_code == 0
-        notify_mock.assert_called_once_with("%7")
+        notify_mock.assert_called_once_with(
+            app="claude", hook="Notification", payload="", meta={"TMUX_PANE": "%7"}
+        )
 
     @staticmethod
     @patch("vekna.mills.notify.NotifyClientMill.notify", new_callable=AsyncMock)

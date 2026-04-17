@@ -24,8 +24,15 @@ def _make_mill(tmux: MagicMock, socket_server: AsyncMock) -> ServerMill:
     return ServerMill(
         tmux=tmux,
         socket_server=socket_server,
-        idle_threshold_seconds=3.0,
-        clear_poll_interval_seconds=1.0,
+        activity_threshold_seconds=5.0,
+        poll_interval_seconds=1.0,
+    )
+
+
+def _event_json(pane_id: str = "%3") -> str:
+    return (
+        f'{{"app": "claude", "hook": "Notification",'
+        f' "payload": "", "meta": {{"TMUX_PANE": "{pane_id}"}}}}'
     )
 
 
@@ -94,7 +101,7 @@ class TestHandle:
         await mill.run()
 
         handler = socket_server.start.call_args[0][0]
-        result = await handler('{"pane_id": "%3"}')
+        result = await handler(_event_json("%3"))
 
         tmux.select_pane.assert_called_once_with("%3")
         tmux.mark_window.assert_not_called()
@@ -126,7 +133,7 @@ class TestHandle:
         await mill.run()
 
         handler = socket_server.start.call_args[0][0]
-        result = await handler('{"pane_id": "%3"}')
+        result = await handler(_event_json("%3"))
 
         tmux.select_pane.assert_called_once_with("%3")
         tmux.mark_window.assert_not_called()
@@ -134,7 +141,7 @@ class TestHandle:
 
     @staticmethod
     @pytest.mark.asyncio
-    async def test_marks_window_when_user_is_typing() -> None:
+    async def test_marks_window_when_user_is_active() -> None:
         tmux = _make_tmux(idle=1.0, window_id="@5")
         socket_server = AsyncMock()
         mill = _make_mill(tmux, socket_server)
@@ -142,7 +149,7 @@ class TestHandle:
         await mill.run()
 
         handler = socket_server.start.call_args[0][0]
-        result = await handler('{"pane_id": "%3"}')
+        result = await handler(_event_json("%3"))
 
         tmux.select_pane.assert_not_called()
         tmux.window_id_for_pane.assert_called_once_with("%3")
@@ -159,9 +166,25 @@ class TestHandle:
         await mill.run()
 
         handler = socket_server.start.call_args[0][0]
-        result = await handler('{"pane_id": "%3"}')
+        result = await handler(_event_json("%3"))
 
         tmux.select_pane.assert_not_called()
+        tmux.mark_window.assert_not_called()
+        assert result == OK_RESPONSE
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_switches_pane_at_activity_boundary() -> None:
+        tmux = _make_tmux(idle=5.0)
+        socket_server = AsyncMock()
+        mill = _make_mill(tmux, socket_server)
+
+        await mill.run()
+
+        handler = socket_server.start.call_args[0][0]
+        result = await handler(_event_json("%3"))
+
+        tmux.select_pane.assert_called_once_with("%3")
         tmux.mark_window.assert_not_called()
         assert result == OK_RESPONSE
 
@@ -176,7 +199,7 @@ class TestClearMarksOnce:
 
         await mill.run()
         handler = socket_server.start.call_args[0][0]
-        await handler('{"pane_id": "%3"}')
+        await handler(_event_json("%3"))
 
         mill.clear_marks_once()
 
@@ -191,7 +214,7 @@ class TestClearMarksOnce:
 
         await mill.run()
         handler = socket_server.start.call_args[0][0]
-        await handler('{"pane_id": "%3"}')
+        await handler(_event_json("%3"))
 
         mill.clear_marks_once()
 
@@ -206,7 +229,7 @@ class TestClearMarksOnce:
 
         await mill.run()
         handler = socket_server.start.call_args[0][0]
-        await handler('{"pane_id": "%3"}')
+        await handler(_event_json("%3"))
 
         mill.clear_marks_once()
 
@@ -221,7 +244,7 @@ class TestClearMarksOnce:
 
         await mill.run()
         handler = socket_server.start.call_args[0][0]
-        await handler('{"pane_id": "%3"}')
+        await handler(_event_json("%3"))
 
         mill.clear_marks_once()
         mill.clear_marks_once()

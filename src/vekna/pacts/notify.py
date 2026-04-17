@@ -6,9 +6,14 @@ OK_RESPONSE = '{"status": "ok"}'
 ERROR_RESPONSE_INVALID = '{"status": "error", "reason": "invalid request"}'
 
 
-class NotifyRequest(BaseModel):
-    pane_id: str
+class Event(BaseModel):
+    app: str
+    hook: str
+    payload: str
+    meta: dict[str, str]
 
 
 class NotifyClientMillProtocol(Protocol):
-    async def notify(self, pane_id: str) -> None: ...
+    async def notify(
+        self, app: str, hook: str, payload: str, meta: dict[str, str]
+    ) -> None: ...

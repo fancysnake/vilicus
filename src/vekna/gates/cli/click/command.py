@@ -35,7 +35,14 @@ class ClickGate:
             if tmux_env is None or pane_id is None:
                 raise click.UsageError(_MISSING_TMUX_MSG)
             mill = self._notify_client_mill_factory(tmux_env)
-            asyncio.run(mill.notify(pane_id))
+            asyncio.run(
+                mill.notify(
+                    app="claude",
+                    hook="Notification",
+                    payload="",
+                    meta={"TMUX_PANE": pane_id},
+                )
+            )
 
         vekna.add_command(notify)
 

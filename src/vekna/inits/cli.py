@@ -11,9 +11,9 @@ from vekna.mills.server import ServerMill
 from vekna.pacts.notify import NotifyClientMillProtocol
 from vekna.pacts.server import ServerMillProtocol
 from vekna.specs import (
+    ACTIVITY_THRESHOLD_SECONDS,
     ATTENTION_POLL_INTERVAL_SECONDS,
     ATTENTION_WINDOW_STATUS_STYLE,
-    IDLE_TYPING_THRESHOLD_SECONDS,
     paths_for,
     stem_for_cwd,
     stem_from_tmux_env,
@@ -32,8 +32,8 @@ def _build_server_mill() -> ServerMillProtocol:
     return ServerMill(
         tmux=tmux_link,
         socket_server=socket_server_link,
-        idle_threshold_seconds=IDLE_TYPING_THRESHOLD_SECONDS,
-        clear_poll_interval_seconds=ATTENTION_POLL_INTERVAL_SECONDS,
+        activity_threshold_seconds=ACTIVITY_THRESHOLD_SECONDS,
+        poll_interval_seconds=ATTENTION_POLL_INTERVAL_SECONDS,
     )
 
 

@@ -61,6 +61,24 @@ class TmuxLink:
             "set-window-option", "-u", "-t", window_id, "window-status-style"
         )
 
+    def last_activity_seconds_ago(self) -> float:
+        line = self._first_stdout_line(
+            self._server.cmd(
+                "display-message",
+                "-p",
+                "-t",
+                self._session_name,
+                "-F",
+                "#{session_activity}",
+            )
+        )
+        if line is None:
+            return 0.0
+        try:
+            return time.time() - int(line)
+        except ValueError:
+            return 0.0
+
     @staticmethod
     def _first_stdout_line(result: tmux_cmd) -> str | None:
         if not (stdout := result.stdout):
