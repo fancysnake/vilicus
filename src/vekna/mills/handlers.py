@@ -3,8 +3,8 @@ import itertools
 
 from pydantic import BaseModel, ConfigDict, ValidationError
 
-from vekna.pacts.bus import EventBusProtocol
-from vekna.pacts.notify import Event
+from vekna.pacts.bus import App, EventBusProtocol, Hook
+from vekna.pacts.notify import ERROR_PAYLOAD_INVALID_NOTIFICATION, Event
 from vekna.pacts.tmux import TmuxLinkProtocol
 
 
@@ -30,9 +30,9 @@ class ClaudeNotificationHandler:
         except ValidationError:
             self._bus.publish(
                 Event(
-                    app="vekna",
-                    hook="Error",
-                    payload="invalid claude notification payload",
+                    app=App.VEKNA,
+                    hook=Hook.ERROR,
+                    payload=ERROR_PAYLOAD_INVALID_NOTIFICATION,
                     meta={},
                 )
             )
@@ -40,7 +40,7 @@ class ClaudeNotificationHandler:
         if not (pane_id := event.meta.get("TMUX_PANE", "")):
             return
         self._bus.publish(
-            Event(app="vekna", hook="SelectPane", payload=pane_id, meta={})
+            Event(app=App.VEKNA, hook=Hook.SELECT_PANE, payload=pane_id, meta={})
         )
 
 

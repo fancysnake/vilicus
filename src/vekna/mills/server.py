@@ -37,6 +37,7 @@ class ServerMill:
                 task.cancel()
                 with contextlib.suppress(asyncio.CancelledError):
                     await task
+            await self._bus.drain()
             await self._socket_server.stop()
 
     async def handle(self, message: str) -> str:

@@ -1,7 +1,7 @@
 import asyncio
 import logging
 
-from vekna.pacts.bus import HandlerProtocol
+from vekna.pacts.bus import App, HandlerProtocol, Hook
 from vekna.pacts.notify import Event
 
 _log = logging.getLogger(__name__)
@@ -19,7 +19,7 @@ class EventBus:
         self._handlers: dict[tuple[str, str], list[HandlerProtocol]] = {}
         self._tasks: set[asyncio.Task[None]] = set()
 
-    def register(self, app: str, hook: str, handler: HandlerProtocol) -> None:
+    def register(self, app: App, hook: Hook, handler: HandlerProtocol) -> None:
         self._handlers.setdefault((app, hook), []).append(handler)
 
     def publish(self, event: Event) -> None:
@@ -28,3 +28,7 @@ class EventBus:
             self._tasks.add(task)
             task.add_done_callback(self._tasks.discard)
             task.add_done_callback(_log_task_exception)
+
+    async def drain(self) -> None:
+        if self._tasks:
+            await asyncio.gather(*self._tasks, return_exceptions=True)

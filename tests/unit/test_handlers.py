@@ -9,7 +9,7 @@ from vekna.mills.handlers import (
     DisplayErrorHandler,
     SelectPaneHandler,
 )
-from vekna.pacts.notify import Event
+from vekna.pacts.notify import ERROR_PAYLOAD_INVALID_NOTIFICATION, Event
 from vekna.specs import IDLE_THRESHOLD_SECONDS
 
 _THRESHOLD = IDLE_THRESHOLD_SECONDS
@@ -91,7 +91,7 @@ class TestClaudeNotificationHandler:
             Event(
                 app="vekna",
                 hook="Error",
-                payload="invalid claude notification payload",
+                payload=ERROR_PAYLOAD_INVALID_NOTIFICATION,
                 meta={},
             )
         )
@@ -111,7 +111,7 @@ class TestClaudeNotificationHandler:
             Event(
                 app="vekna",
                 hook="Error",
-                payload="invalid claude notification payload",
+                payload=ERROR_PAYLOAD_INVALID_NOTIFICATION,
                 meta={},
             )
         )

@@ -55,14 +55,7 @@ class TmuxLink:
 
     def last_activity_seconds_ago(self) -> float:
         line = self._first_stdout_line(
-            self._server.cmd(
-                "display-message",
-                "-p",
-                "-t",
-                self._session_name,
-                "-F",
-                "#{session_activity}",
-            )
+            self._server.cmd("display-message", "-p", "-F", "#{client_activity}")
         )
         if line is None:
             return math.inf

@@ -178,7 +178,7 @@ class TestLastActivitySecondsAgo:
         assert result == math.inf
 
     @staticmethod
-    def test_returns_elapsed_seconds_since_session_activity() -> None:
+    def test_returns_elapsed_seconds_since_client_activity() -> None:
         link, server = _make_link(session_name="work")
         now = int(time.time())
         server.cmd.return_value = _mock_cmd(stdout=[str(now - _ACTIVITY_OFFSET)])
@@ -187,5 +187,5 @@ class TestLastActivitySecondsAgo:
 
         assert _ACTIVITY_OFFSET - 1 < result < _ACTIVITY_OFFSET + _ACTIVITY_TOLERANCE
         server.cmd.assert_called_once_with(
-            "display-message", "-p", "-t", "work", "-F", "#{session_activity}"
+            "display-message", "-p", "-F", "#{client_activity}"
         )

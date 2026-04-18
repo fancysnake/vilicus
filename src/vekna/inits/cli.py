@@ -14,6 +14,7 @@ from vekna.mills.handlers import (
 )
 from vekna.mills.notify import NotifyClientMill
 from vekna.mills.server import ServerMill
+from vekna.pacts.bus import App, Hook
 from vekna.pacts.notify import NotifyClientMillProtocol
 from vekna.pacts.server import ServerMillProtocol
 from vekna.specs import (
@@ -39,9 +40,9 @@ def _build_server_mill() -> ServerMillProtocol:
     select_handler = SelectPaneHandler(
         tmux_link, IDLE_THRESHOLD_SECONDS, ATTENTION_POLL_INTERVAL_SECONDS
     )
-    bus.register("vekna", "SelectPane", select_handler)
-    bus.register("vekna", "Error", DisplayErrorHandler(tmux_link))
-    bus.register("claude", "Notification", ClaudeNotificationHandler(bus))
+    bus.register(App.VEKNA, Hook.SELECT_PANE, select_handler)
+    bus.register(App.VEKNA, Hook.ERROR, DisplayErrorHandler(tmux_link))
+    bus.register(App.CLAUDE, Hook.NOTIFICATION, ClaudeNotificationHandler(bus))
     return ServerMill(
         tmux=tmux_link,
         socket_server=socket_server_link,

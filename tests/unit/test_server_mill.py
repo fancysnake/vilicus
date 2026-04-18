@@ -12,8 +12,14 @@ def _make_tmux() -> MagicMock:
     return MagicMock()
 
 
+def _make_bus() -> MagicMock:
+    bus = MagicMock()
+    bus.drain = AsyncMock()
+    return bus
+
+
 def _make_mill(tmux: MagicMock, socket_server: AsyncMock) -> ServerMill:
-    return ServerMill(tmux=tmux, socket_server=socket_server, bus=MagicMock())
+    return ServerMill(tmux=tmux, socket_server=socket_server, bus=_make_bus())
 
 
 def _event_json(pane_id: str = "%3") -> str:
@@ -91,19 +97,29 @@ class TestRun:
                 raise
 
         mill = ServerMill(
-            tmux=tmux, socket_server=socket_server, bus=MagicMock(), background=[bg]
+            tmux=tmux, socket_server=socket_server, bus=_make_bus(), background=[bg]
         )
 
         await mill.run()
 
         assert cancelled == [True]
 
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_drains_bus_after_attach() -> None:
+        bus = _make_bus()
+        mill = ServerMill(tmux=_make_tmux(), socket_server=AsyncMock(), bus=bus)
+
+        await mill.run()
+
+        bus.drain.assert_awaited_once()
+
 
 class TestHandle:
     @staticmethod
     @pytest.mark.asyncio
     async def test_publishes_event_to_bus() -> None:
-        bus = MagicMock()
+        bus = _make_bus()
         socket_server = AsyncMock()
         mill = ServerMill(tmux=_make_tmux(), socket_server=socket_server, bus=bus)
 
@@ -148,7 +164,7 @@ class TestHandle:
     @staticmethod
     @pytest.mark.asyncio
     async def test_does_not_publish_on_invalid_message() -> None:
-        bus = MagicMock()
+        bus = _make_bus()
         socket_server = AsyncMock()
         mill = ServerMill(tmux=_make_tmux(), socket_server=socket_server, bus=bus)
 

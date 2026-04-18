@@ -1,6 +1,18 @@
+from enum import Enum
 from typing import Protocol
 
 from vekna.pacts.notify import Event
+
+
+class App(str, Enum):
+    VEKNA = "vekna"
+    CLAUDE = "claude"
+
+
+class Hook(str, Enum):
+    SELECT_PANE = "SelectPane"
+    ERROR = "Error"
+    NOTIFICATION = "Notification"
 
 
 class HandlerProtocol(Protocol):
@@ -8,6 +20,8 @@ class HandlerProtocol(Protocol):
 
 
 class EventBusProtocol(Protocol):
-    def register(self, app: str, hook: str, handler: HandlerProtocol) -> None: ...
+    def register(self, app: App, hook: Hook, handler: HandlerProtocol) -> None: ...
 
     def publish(self, event: Event) -> None: ...
+
+    async def drain(self) -> None: ...
