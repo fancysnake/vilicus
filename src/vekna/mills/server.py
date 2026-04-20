@@ -24,17 +24,18 @@ class ServerMill:
         self._bus = bus
         self._session_name_for_cwd = session_name_for_cwd
         self._background = background
-        self._sessions: dict[str, str] = {}  # cwd → session_name
         self._pending: dict[str, int] = {}  # session_name → notification count
+        self._stop_event: asyncio.Event | None = None
 
     async def run(self) -> None:
+        self._stop_event = asyncio.Event()
         await self._socket_server.start(self.handle)
         bg_tasks: list[asyncio.Task[None]] = [
             asyncio.create_task(coro()) for coro in self._background
         ]
         try:
             await asyncio.sleep(0)  # let background tasks reach their first await
-            await asyncio.Event().wait()
+            await self._stop_event.wait()
         finally:
             for task in bg_tasks:
                 task.cancel()
@@ -65,15 +66,17 @@ class ServerMill:
     def _handle_ensure_session(self, event: Event) -> str:
         cwd = event.meta["cwd"]
         session_name = self._session_name_for_cwd(cwd)
-        self._tmux.ensure_session(session_name)
-        self._sessions[cwd] = session_name
+        self._tmux.ensure_session(session_name, cwd)
         self._pending[session_name] = 0
         return Response(
             status="ok", data={"session_name": session_name}
         ).model_dump_json()
 
+    def clear_pending(self, session_name: str) -> None:
+        self._pending.pop(session_name, None)
+
     def _handle_status_bar(self) -> str:
-        parts = [
+        parts = ["vekna 💀"] + [
             f"{name}({count})" for name, count in self._pending.items() if count > 0
         ]
         return Response(status="ok", data={"text": " ".join(parts)}).model_dump_json()

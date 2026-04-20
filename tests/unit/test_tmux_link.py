@@ -1,11 +1,13 @@
 import math
 import time
+from pathlib import Path
 from unittest.mock import MagicMock, call, patch
 
 from vekna.links.tmux import TmuxLink
 
 _ACTIVITY_OFFSET = 10
 _ACTIVITY_TOLERANCE = 2
+_CONF_PATH = Path("/tmp/vekna.conf")
 
 
 def _mock_cmd(stdout: list[str] | None = None) -> MagicMock:
@@ -14,11 +16,13 @@ def _mock_cmd(stdout: list[str] | None = None) -> MagicMock:
     return result
 
 
-def _make_link(attention_style: str = "bg=red") -> tuple[TmuxLink, MagicMock]:
+def _make_link(
+    attention_style: str = "bg=red", conf_path: Path | None = None
+) -> tuple[TmuxLink, MagicMock]:
     with patch("vekna.links.tmux.libtmux") as mock_lib:
         mock_server = MagicMock()
         mock_lib.Server.return_value = mock_server
-        link = TmuxLink(attention_style=attention_style)
+        link = TmuxLink(attention_style=attention_style, conf_path=conf_path)
         return link, mock_server
 
 
@@ -28,18 +32,47 @@ class TestEnsureSession:
         link, server = _make_link()
         server.has_session.return_value = False
 
-        link.ensure_session("work")
+        link.ensure_session("work", "/home/user/project")
 
-        server.new_session.assert_called_once_with(session_name="work")
+        server.new_session.assert_called_once_with(
+            session_name="work", start_directory="/home/user/project"
+        )
 
     @staticmethod
     def test_skips_creation_when_session_exists() -> None:
         link, server = _make_link()
         server.has_session.return_value = True
 
-        link.ensure_session("work")
+        link.ensure_session("work", "/home/user/project")
 
         server.new_session.assert_not_called()
+
+    @staticmethod
+    def test_sources_conf_file_when_conf_path_set() -> None:
+        link, server = _make_link(conf_path=_CONF_PATH)
+        server.has_session.return_value = False
+
+        link.ensure_session("work", "/home/user/project")
+
+        server.cmd.assert_called_once_with("source-file", str(_CONF_PATH))
+
+    @staticmethod
+    def test_sources_conf_file_even_when_session_already_exists() -> None:
+        link, server = _make_link(conf_path=_CONF_PATH)
+        server.has_session.return_value = True
+
+        link.ensure_session("work", "/home/user/project")
+
+        server.cmd.assert_called_once_with("source-file", str(_CONF_PATH))
+
+    @staticmethod
+    def test_does_not_source_conf_file_when_conf_path_is_none() -> None:
+        link, server = _make_link(conf_path=None)
+        server.has_session.return_value = False
+
+        link.ensure_session("work", "/home/user/project")
+
+        server.cmd.assert_not_called()
 
 
 class TestAttach:

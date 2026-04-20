@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import os
 import sys
 from collections.abc import Callable
@@ -71,15 +72,13 @@ class ClickGate:
         @click.command("status-bar")
         def status_bar() -> None:
             mill = self._notify_client_mill_factory()
-            try:
+            with contextlib.suppress(OSError):
                 response = asyncio.run(
                     mill.request(
                         Event(app=App.VEKNA, hook=Hook.STATUS_BAR, payload="", meta={})
                     )
                 )
                 click.echo(response.data.get("text", ""))
-            except OSError:
-                pass
 
         vekna.add_command(daemon)
         vekna.add_command(notify)

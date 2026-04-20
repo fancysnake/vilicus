@@ -185,7 +185,7 @@ class TestHandle:
         )
 
         data = json.loads(result)
-        assert data["data"]["text"] == "work(1)"
+        assert data["data"]["text"] == "vekna 💀 work(1)"
 
     @staticmethod
     @pytest.mark.asyncio
@@ -207,7 +207,7 @@ class TestHandle:
         )
 
         data = json.loads(result)
-        assert not data["data"]["text"]
+        assert data["data"]["text"] == "vekna 💀"
 
 
 class TestHandleEnsureSession:
@@ -232,7 +232,7 @@ class TestHandleEnsureSession:
         assert data["status"] == "ok"
         session_name = data["data"]["session_name"]
         assert session_name.startswith("vekna-foo-")
-        tmux.ensure_session.assert_called_once_with(session_name)
+        tmux.ensure_session.assert_called_once_with(session_name, "/tmp/foo")
 
     @staticmethod
     @pytest.mark.asyncio
@@ -259,7 +259,7 @@ class TestHandleEnsureSession:
         )
 
         data = json.loads(result)
-        assert not data["data"]["text"]
+        assert data["data"]["text"] == "vekna 💀"
 
     @staticmethod
     @pytest.mark.asyncio
@@ -281,6 +281,41 @@ class TestHandleEnsureSession:
         bus.publish.assert_not_called()
 
 
+class TestClearPending:
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_clears_pending_count_for_session() -> None:
+        tmux = _make_tmux()
+        tmux.session_name_for_pane.return_value = "work"
+        mill = ServerMill(
+            tmux=tmux,
+            socket_server=AsyncMock(),
+            bus=_make_bus(),
+            session_name_for_cwd=_SESSION_NAME_FOR_CWD,
+        )
+
+        await mill.handle(_event_json("%3"))
+        mill.clear_pending("work")
+        result = await mill.handle(
+            '{"app": "vekna", "hook": "StatusBar", "payload": "", "meta": {}}'
+        )
+
+        data = json.loads(result)
+        assert data["data"]["text"] == "vekna 💀"
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_clear_pending_is_safe_for_unknown_session() -> None:
+        mill = ServerMill(
+            tmux=_make_tmux(),
+            socket_server=AsyncMock(),
+            bus=_make_bus(),
+            session_name_for_cwd=_SESSION_NAME_FOR_CWD,
+        )
+
+        mill.clear_pending("nonexistent")  # must not raise
+
+
 class TestHandleStatusBar:
     @staticmethod
     @pytest.mark.asyncio
@@ -298,7 +333,7 @@ class TestHandleStatusBar:
 
         data = json.loads(result)
         assert data["status"] == "ok"
-        assert not data["data"]["text"]
+        assert data["data"]["text"] == "vekna 💀"
 
     @staticmethod
     @pytest.mark.asyncio

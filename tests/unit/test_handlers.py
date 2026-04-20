@@ -293,6 +293,66 @@ class TestSelectPaneHandler:
         tmux.last_activity_seconds_ago.assert_called_once_with("work")
 
 
+class TestSelectPaneHandlerOnSessionVisited:
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_calls_callback_when_pane_selected_idle() -> None:
+        tmux = MagicMock()
+        tmux.session_name_for_pane.return_value = "work"
+        tmux.last_activity_seconds_ago.return_value = _THRESHOLD
+        visited: list[str] = []
+        handler = SelectPaneHandler(
+            tmux=tmux,
+            idle_threshold_seconds=_THRESHOLD,
+            poll_interval_seconds=_POLL,
+            on_session_visited=visited.append,
+        )
+
+        await handler(_select_pane_event("%7"))
+
+        assert visited == ["work"]
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_does_not_call_callback_when_window_marked() -> None:
+        tmux = MagicMock()
+        tmux.session_name_for_pane.return_value = "work"
+        tmux.last_activity_seconds_ago.return_value = _THRESHOLD - 0.1
+        tmux.window_id_for_pane.return_value = "@5"
+        visited: list[str] = []
+        handler = SelectPaneHandler(
+            tmux=tmux,
+            idle_threshold_seconds=_THRESHOLD,
+            poll_interval_seconds=_POLL,
+            on_session_visited=visited.append,
+        )
+
+        await handler(_select_pane_event("%3"))
+
+        assert visited == []
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_calls_callback_when_mark_cleared() -> None:
+        tmux = MagicMock()
+        tmux.session_name_for_pane.return_value = "work"
+        tmux.last_activity_seconds_ago.return_value = _THRESHOLD - 0.1
+        tmux.window_id_for_pane.return_value = "@5"
+        tmux.active_window_id.return_value = "@5"
+        visited: list[str] = []
+        handler = SelectPaneHandler(
+            tmux=tmux,
+            idle_threshold_seconds=_THRESHOLD,
+            poll_interval_seconds=_POLL,
+            on_session_visited=visited.append,
+        )
+
+        await handler(_select_pane_event("%3"))
+        handler.clear_marks_once()
+
+        assert visited == ["work"]
+
+
 class TestSelectPaneHandlerClearMarks:
     @staticmethod
     @pytest.mark.asyncio

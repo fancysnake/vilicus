@@ -4,6 +4,8 @@ import re
 import tempfile
 from pathlib import Path
 
+TMUX_CONF_PATH: Path = Path(__file__).parent.parent / "conf" / "tmux.conf"
+
 _SLUG_CLEAN = re.compile(r"[^a-z0-9]+")
 STEM_DIGEST_LENGTH = 6
 

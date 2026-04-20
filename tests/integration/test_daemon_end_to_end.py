@@ -126,7 +126,7 @@ class TestDaemonEndToEnd:
 
         assert response.status == "ok"
         assert response.data["session_name"] == _SESSION_NAME
-        tmux.ensure_session.assert_called_once_with(_SESSION_NAME)
+        tmux.ensure_session.assert_called_once_with(_SESSION_NAME, "/tmp/myproject")
 
     @staticmethod
     @pytest.mark.asyncio

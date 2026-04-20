@@ -1,18 +1,24 @@
 import math
 import time
+from pathlib import Path
 
 import libtmux
 from libtmux.common import tmux_cmd
 
 
 class TmuxLink:
-    def __init__(self, attention_style: str) -> None:
+    def __init__(self, attention_style: str, conf_path: Path | None = None) -> None:
         self._server = libtmux.Server()
         self._attention_style = attention_style
+        self._conf_path = conf_path
 
-    def ensure_session(self, session_name: str) -> None:
+    def ensure_session(self, session_name: str, start_directory: str) -> None:
         if not self._server.has_session(session_name):
-            self._server.new_session(session_name=session_name)
+            self._server.new_session(
+                session_name=session_name, start_directory=start_directory
+            )
+        if self._conf_path is not None:
+            self._server.cmd("source-file", str(self._conf_path))
 
     def attach(self, session_name: str) -> None:
         self._server.attach_session(target_session=session_name)

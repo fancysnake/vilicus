@@ -2,7 +2,7 @@ import asyncio
 import os
 import socket
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Coroutine
 from pathlib import Path
 
 from click import Group
@@ -26,6 +26,7 @@ from vekna.specs import (
     ATTENTION_POLL_INTERVAL_SECONDS,
     ATTENTION_WINDOW_STATUS_STYLE,
     IDLE_THRESHOLD_SECONDS,
+    TMUX_CONF_PATH,
     daemon_socket_path,
     stem_for_cwd,
 )
@@ -36,22 +37,30 @@ _DAEMON_DID_NOT_START = "daemon did not start"
 
 
 def _build_server_mill() -> ServerMillProtocol:
-    tmux_link = TmuxLink(attention_style=ATTENTION_WINDOW_STATUS_STYLE)
+    tmux_link = TmuxLink(
+        attention_style=ATTENTION_WINDOW_STATUS_STYLE, conf_path=TMUX_CONF_PATH
+    )
     socket_server_link = SocketServerLink(socket_path=daemon_socket_path())
     bus = EventBus()
-    select_handler = SelectPaneHandler(
-        tmux_link, IDLE_THRESHOLD_SECONDS, ATTENTION_POLL_INTERVAL_SECONDS
-    )
-    bus.register(App.VEKNA, Hook.SELECT_PANE, select_handler)
-    bus.register(App.VEKNA, Hook.ERROR, DisplayErrorHandler(tmux_link))
-    bus.register(App.CLAUDE, Hook.NOTIFICATION, ClaudeNotificationHandler(bus))
-    return ServerMill(
+    background: list[Callable[[], Coroutine[None, None, None]]] = []
+    server_mill = ServerMill(
         tmux=tmux_link,
         socket_server=socket_server_link,
         bus=bus,
         session_name_for_cwd=lambda cwd: stem_for_cwd(Path(cwd)),
-        background=[select_handler.clear_marks_loop],
+        background=background,
     )
+    select_handler = SelectPaneHandler(
+        tmux_link,
+        IDLE_THRESHOLD_SECONDS,
+        ATTENTION_POLL_INTERVAL_SECONDS,
+        on_session_visited=server_mill.clear_pending,
+    )
+    background.append(select_handler.clear_marks_loop)
+    bus.register(App.VEKNA, Hook.SELECT_PANE, select_handler)
+    bus.register(App.VEKNA, Hook.ERROR, DisplayErrorHandler(tmux_link))
+    bus.register(App.CLAUDE, Hook.NOTIFICATION, ClaudeNotificationHandler(bus))
+    return server_mill
 
 
 def _build_notify_client_mill() -> NotifyClientMillProtocol:

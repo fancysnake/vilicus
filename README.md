@@ -68,6 +68,17 @@ To show pending notification counts across all sessions, add this to your
 set -g status-right '#(vekna status-bar)'
 ```
 
+> **Note:** tmux runs status bar commands with a limited `PATH`. If `vekna`
+> is not installed globally (e.g. it lives in a virtualenv), use the full
+> path instead:
+>
+> ```
+> set -g status-right '#(/path/to/vekna status-bar)'
+> ```
+>
+> Find the path with `which vekna`. To install globally, use
+> `pipx install .` from the repo root.
+
 Output looks like `myapp(2) api(1)` when agents in those sessions are
 waiting. The count resets when you run `vekna` from that directory again
 (i.e. when you attach to the session).

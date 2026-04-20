@@ -1,5 +1,6 @@
 import asyncio
 import itertools
+from collections.abc import Callable
 
 from pydantic import BaseModel, ConfigDict, ValidationError
 
@@ -67,10 +68,12 @@ class SelectPaneHandler:
         tmux: TmuxLinkProtocol,
         idle_threshold_seconds: float,
         poll_interval_seconds: float,
+        on_session_visited: Callable[[str], None] | None = None,
     ) -> None:
         self._tmux = tmux
         self._idle_threshold_seconds = idle_threshold_seconds
         self._poll_interval_seconds = poll_interval_seconds
+        self._on_session_visited = on_session_visited
         self._marked_windows: dict[str, str] = {}  # window_id → session_name
 
     async def __call__(self, event: Event) -> None:
@@ -86,6 +89,8 @@ class SelectPaneHandler:
                 self._marked_windows[window_id] = session_name
         else:
             self._tmux.select_pane(pane_id)
+            if self._on_session_visited is not None:
+                self._on_session_visited(session_name)
 
     async def clear_marks_loop(self) -> None:
         """Poll and unmark windows as the user navigates to them."""
@@ -98,3 +103,5 @@ class SelectPaneHandler:
             if self._tmux.active_window_id(session_name) == window_id:
                 del self._marked_windows[window_id]
                 self._tmux.unmark_window(window_id)
+                if self._on_session_visited is not None:
+                    self._on_session_visited(session_name)
