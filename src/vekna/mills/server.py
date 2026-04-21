@@ -9,6 +9,7 @@ from vekna.pacts.bus import App, EventBusProtocol, Hook
 from vekna.pacts.notify import ERROR_RESPONSE_INVALID, OK_RESPONSE, Event
 from vekna.pacts.socket import Response, SocketServerLinkProtocol
 from vekna.pacts.tmux import TmuxLinkProtocol
+from vekna.specs.constants import STEM_DIGEST_LENGTH
 
 # Each tuple is (emoji, tmux 256-colour background, tmux 256-colour foreground).
 # Emojis follow necromancer / dark-fantasy iconography;
@@ -45,6 +46,15 @@ _SESSION_MARKS: list[tuple[str, int, int]] = [
 def _mark_for_session(session_name: str) -> tuple[str, int, int]:
     index = int(hashlib.sha256(session_name.encode()).hexdigest(), 16)
     return _SESSION_MARKS[index % len(_SESSION_MARKS)]
+
+
+def _pretty_name(session_name: str) -> str:
+    """Extract the folder name from a session name: 'vekna-myproject-a1b2c3' → 'myproject'."""
+    prefix = "vekna-"
+    suffix_len = 1 + STEM_DIGEST_LENGTH  # "-" + digest
+    if session_name.startswith(prefix) and len(session_name) > len(prefix) + suffix_len:
+        return session_name[len(prefix):-suffix_len]
+    return session_name
 
 
 class ServerMill:
@@ -117,11 +127,14 @@ class ServerMill:
         emoji, bg_colour, fg_colour = (
             _mark_for_session(session_name) if session_name else _SESSION_MARKS[0]
         )
+        label = _pretty_name(session_name) if session_name else "vekna"
         pending_parts = [
-            f"{name}({count})" for name, count in self._pending.items() if count > 0
+            f"{_pretty_name(name)}({count})"
+            for name, count in self._pending.items()
+            if count > 0
         ]
         badge = (
-            f"#[bg=colour{bg_colour},fg=colour{fg_colour}] {emoji} vekna "
+            f"#[bg=colour{bg_colour},fg=colour{fg_colour}] {emoji} {label} "
             "#[bg=default,fg=colour245]"
         )
         text = badge + (" ".join(pending_parts) if pending_parts else "")

@@ -156,7 +156,7 @@ class TestDaemonEndToEnd:
         )
 
         data = json.loads(response.model_dump_json())
-        assert f"{_SESSION_NAME}(1)" in data["data"]["text"]
+        assert "myproject(1)" in data["data"]["text"]
 
     @staticmethod
     @pytest.mark.asyncio
