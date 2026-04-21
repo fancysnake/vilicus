@@ -156,7 +156,7 @@ class TestDaemonEndToEnd:
         )
 
         data = json.loads(response.model_dump_json())
-        assert data["data"]["text"] == f"{_SESSION_NAME}(1)"
+        assert f"{_SESSION_NAME}(1)" in data["data"]["text"]
 
     @staticmethod
     @pytest.mark.asyncio
@@ -194,12 +194,12 @@ class TestDaemonEndToEnd:
         )
 
         data = json.loads(response.model_dump_json())
-        assert not data["data"]["text"]
+        assert _SESSION_NAME not in data["data"]["text"]
 
     @staticmethod
     @pytest.mark.asyncio
     @pytest.mark.usefixtures("running_server")
-    async def test_status_bar_empty_when_no_pending(socket_path) -> None:
+    async def test_status_bar_shows_badge_when_no_pending(socket_path) -> None:
         client = NotifyClientMill(
             socket_client=SocketClientLink(socket_path=socket_path)
         )
@@ -209,4 +209,4 @@ class TestDaemonEndToEnd:
         )
 
         data = json.loads(response.model_dump_json())
-        assert not data["data"]["text"]
+        assert "vekna" in data["data"]["text"]

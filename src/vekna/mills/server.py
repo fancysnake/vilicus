@@ -1,5 +1,6 @@
 import asyncio
 import contextlib
+import hashlib
 from collections.abc import Callable, Coroutine, Sequence
 
 from pydantic import ValidationError
@@ -8,6 +9,42 @@ from vekna.pacts.bus import App, EventBusProtocol, Hook
 from vekna.pacts.notify import ERROR_RESPONSE_INVALID, OK_RESPONSE, Event
 from vekna.pacts.socket import Response, SocketServerLinkProtocol
 from vekna.pacts.tmux import TmuxLinkProtocol
+
+# Each tuple is (emoji, tmux 256-colour background, tmux 256-colour foreground).
+# Emojis follow necromancer / dark-fantasy iconography;
+# bg colours are distinct dark shades; fg colours contrast with each bg.
+_SESSION_MARKS: list[tuple[str, int, int]] = [
+    ("☠️",         88, 231),  # dark red bg          → white fg
+    ("⚔️",         52, 220),  # dark crimson bg       → bright yellow fg
+    ("⚰️",         94,  45),  # dark amber-brown bg   → bright cyan fg
+    ("⛓️",         23, 214),  # dark teal bg          → orange fg
+    ("✋",        130, 159),  # dark orange-brown bg  → light cyan fg
+    ("🌙",         17, 226),  # dark navy bg          → yellow fg
+    ("🏰",         58, 207),  # dark olive bg         → bright pink fg
+    ("🐍",         28, 228),  # dark forest green bg  → light yellow fg
+    ("👁️",         53, 154),  # dark burgundy-purple bg → yellow-green fg
+    ("👑",        100,  51),  # dark olive-gold bg    → bright cyan fg
+    ("💀",         22, 231),  # deep forest green bg  → white fg
+    ("📖",         54,  82),  # dark magenta bg       → bright green fg
+    ("📜",         64, 201),  # dark yellow-green bg  → bright magenta fg
+    ("🔮",         55, 226),  # dark violet bg        → yellow fg
+    ("🕯️",         18, 214),  # midnight blue bg      → orange fg
+    ("🕷️",         29, 220),  # dark cyan-green bg    → yellow fg
+    ("🕸️",         57, 154),  # dark blue-violet bg   → yellow-green fg
+    ("🗝️",         24, 214),  # dark slate blue bg    → orange fg
+    ("🗡️",         91, 159),  # dark violet-purple bg → light cyan fg
+    ("🦴",         95,  51),  # dark rose-brown bg    → bright cyan fg
+    ("🧙\u200d♂️", 56, 220),  # dark blue-violet bg   → yellow fg
+    ("🧠",         90,  46),  # dark magenta-purple bg → bright green fg
+    ("🧿",         89, 159),  # dark magenta-red bg   → light cyan fg
+    ("🩸",         96,  51),  # dark mauve bg         → bright cyan fg
+    ("🪦",         30, 228),  # dark cyan bg          → light yellow fg
+]
+
+
+def _mark_for_session(session_name: str) -> tuple[str, int, int]:
+    index = int(hashlib.sha256(session_name.encode()).hexdigest(), 16)
+    return _SESSION_MARKS[index % len(_SESSION_MARKS)]
 
 
 class ServerMill:
@@ -52,7 +89,7 @@ class ServerMill:
         if event.app == App.VEKNA and event.hook == Hook.ENSURE_SESSION:
             return self._handle_ensure_session(event)
         if event.app == App.VEKNA and event.hook == Hook.STATUS_BAR:
-            return self._handle_status_bar()
+            return self._handle_status_bar(event)
         if (
             event.app == App.CLAUDE
             and event.hook == Hook.NOTIFICATION
@@ -75,8 +112,17 @@ class ServerMill:
     def clear_pending(self, session_name: str) -> None:
         self._pending.pop(session_name, None)
 
-    def _handle_status_bar(self) -> str:
-        parts = ["vekna 💀"] + [
+    def _handle_status_bar(self, event: Event) -> str:
+        session_name = event.meta.get("session_name", "")
+        emoji, bg_colour, fg_colour = (
+            _mark_for_session(session_name) if session_name else _SESSION_MARKS[0]
+        )
+        pending_parts = [
             f"{name}({count})" for name, count in self._pending.items() if count > 0
         ]
-        return Response(status="ok", data={"text": " ".join(parts)}).model_dump_json()
+        badge = (
+            f"#[bg=colour{bg_colour},fg=colour{fg_colour}] {emoji} vekna "
+            "#[bg=default,fg=colour245]"
+        )
+        text = badge + (" ".join(pending_parts) if pending_parts else "")
+        return Response(status="ok", data={"text": text}).model_dump_json()

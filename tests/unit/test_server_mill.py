@@ -10,6 +10,9 @@ from vekna.pacts.notify import ERROR_RESPONSE_INVALID, OK_RESPONSE, Event
 
 _SESSION_NAME_FOR_CWD = staticmethod(lambda cwd: f"vekna-{cwd.split('/')[-1]}-abc123")
 
+# Badge emitted when no session_name is passed (falls back to skull: dark red bg, white fg).
+_FALLBACK_BADGE = "#[bg=colour88,fg=colour231] ☠️ vekna #[bg=default,fg=colour245]"
+
 
 def _make_tmux() -> MagicMock:
     tmux = MagicMock()
@@ -185,7 +188,7 @@ class TestHandle:
         )
 
         data = json.loads(result)
-        assert data["data"]["text"] == "vekna 💀 work(1)"
+        assert data["data"]["text"] == _FALLBACK_BADGE + "work(1)"
 
     @staticmethod
     @pytest.mark.asyncio
@@ -207,7 +210,7 @@ class TestHandle:
         )
 
         data = json.loads(result)
-        assert data["data"]["text"] == "vekna 💀"
+        assert data["data"]["text"] == _FALLBACK_BADGE
 
 
 class TestHandleEnsureSession:
@@ -259,7 +262,7 @@ class TestHandleEnsureSession:
         )
 
         data = json.loads(result)
-        assert data["data"]["text"] == "vekna 💀"
+        assert data["data"]["text"] == _FALLBACK_BADGE
 
     @staticmethod
     @pytest.mark.asyncio
@@ -301,7 +304,7 @@ class TestClearPending:
         )
 
         data = json.loads(result)
-        assert data["data"]["text"] == "vekna 💀"
+        assert data["data"]["text"] == _FALLBACK_BADGE
 
     @staticmethod
     @pytest.mark.asyncio
@@ -333,7 +336,7 @@ class TestHandleStatusBar:
 
         data = json.loads(result)
         assert data["status"] == "ok"
-        assert data["data"]["text"] == "vekna 💀"
+        assert data["data"]["text"] == _FALLBACK_BADGE
 
     @staticmethod
     @pytest.mark.asyncio

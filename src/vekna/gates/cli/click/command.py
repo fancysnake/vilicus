@@ -70,12 +70,18 @@ class ClickGate:
             )
 
         @click.command("status-bar")
-        def status_bar() -> None:
+        @click.option("--session", default="", help="Current tmux session name")
+        def status_bar(session: str) -> None:
             mill = self._notify_client_mill_factory()
             with contextlib.suppress(OSError):
                 response = asyncio.run(
                     mill.request(
-                        Event(app=App.VEKNA, hook=Hook.STATUS_BAR, payload="", meta={})
+                        Event(
+                            app=App.VEKNA,
+                            hook=Hook.STATUS_BAR,
+                            payload="",
+                            meta={"session_name": session},
+                        )
                     )
                 )
                 click.echo(response.data.get("text", ""))
